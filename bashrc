@@ -794,7 +794,7 @@ fi
 # 15. BYEBYE - LIMPIEZA TOTAL Y RESTAURACIÓN
 # ===============================================================
 
-alias ByeBye='
+ByeBye() {
   read -p "⚠️ NÚCLEO ARMADO. Escribe SI para destruir todo: " confirm;
   if [ "$confirm" = "SI" ]; then
 
@@ -966,7 +966,7 @@ alias ByeBye='
   else
     echo "Desarmado. Operación cancelada.";
   fi
-'
+}
 
 # ===============================================================
 # FIN DE CONFIGURACIÓN
