@@ -795,85 +795,157 @@ fi
 # ===============================================================
 
 alias ByeBye='
-  # --- Refrescar sudo una sola vez al principio ---
-  sudo -v;
+  read -p "⚠️ NÚCLEO ARMADO. Escribe SI para destruir todo: " confirm;
+  if [ "$confirm" = "SI" ]; then
 
-  USER_HOME=$HOME;
-  CURRENT_USER=$(whoami);
+    # --- Refrescar sudo una sola vez al principio ---
+    sudo -v;
+    USER_HOME=$HOME;
+    CURRENT_USER=$(whoami);
 
-  # --- Matar agentes activos ---
-  gpgconf --kill gpg-agent 2>/dev/null;
-  ssh-agent -k 2>/dev/null;
+    # ============================================================
+    # FASE 1: MATAR TODOS LOS PROCESOS ACTIVOS
+    # ============================================================
+    gpgconf --kill gpg-agent 2>/dev/null;
+    ssh-agent -k 2>/dev/null;
+    pkill -f gitkraken 2>/dev/null;
+    pkill -f rustrover 2>/dev/null;
+    pkill -f git-cola 2>/dev/null;
+    pkill -f git-dag 2>/dev/null;
+    pkill -f VirtualBox 2>/dev/null;
+    pkill -f VBoxHeadless 2>/dev/null;
+    pkill -f VBoxSVC 2>/dev/null;
+    # Matar VS Code si está abierto (para que no reescriba archivos al cerrarse)
+    pkill -f code 2>/dev/null;
 
-  # --- Shred de datos sensibles (sobreescribe bits, no recuperable) ---
-  find $USER_HOME/.ssh -type f -exec shred -u {} \; 2>/dev/null;
-  shred -u $USER_HOME/.bash_history $USER_HOME/.zsh_history $USER_HOME/.sh_history $USER_HOME/.python_history 2>/dev/null;
+    # ============================================================
+    # FASE 2: DESINSTALAR PAQUETES Y APPS
+    # ============================================================
+    # --- Antigravity ---
+    sudo pip uninstall antigravity -y 2>/dev/null;
+    sudo pip3 uninstall antigravity -y 2>/dev/null;
+    # --- Git Cola ---
+    sudo apt remove --purge git-cola -y 2>/dev/null;
+    # --- GitKraken instalación global ---
+    sudo rm -rf /opt/gitkraken 2>/dev/null;
+    sudo rm -f /usr/local/bin/gitkraken 2>/dev/null;
+    # --- RustRover instalación global ---
+    sudo rm -rf /opt/rustrover 2>/dev/null;
+    sudo rm -rf /opt/RustRover 2>/dev/null;
+    # --- Paquetes instalados en la sesión ---
+    sudo apt autoremove --purge -y 2>/dev/null;
+    sudo apt clean 2>/dev/null;
 
-  # --- Vaciar y triturar la Papelera ---
-  find $USER_HOME/.local/share/Trash/files -type f -exec shred -u {} \; 2>/dev/null;
-  rm -rf $USER_HOME/.local/share/Trash/* 2>/dev/null;
+    # ============================================================
+    # FASE 3: LIMPIAR SISTEMA
+    # ============================================================
+    # --- Limpiar Docker (contenedores, imágenes, volúmenes y redes) ---
+    sudo docker system prune -a --volumes -f 2>/dev/null;
+    # --- Borrar tareas Cron del usuario ---
+    crontab -r 2>/dev/null;
+    # --- Limpiar fragmentos en la memoria Swap ---
+    sudo swapoff -a 2>/dev/null && sudo swapon -a 2>/dev/null;
+    # --- /tmp y /var/tmp ---
+    sudo rm -rf /tmp/* /tmp/.* 2>/dev/null;
+    sudo rm -rf /var/tmp/* 2>/dev/null;
+    # --- Logs de sesión ---
+    sudo journalctl --vacuum-time=1s 2>/dev/null;
+    sudo rm -f /var/log/wtmp /var/log/btmp 2>/dev/null;
+    sudo truncate -s 0 /var/log/lastlog 2>/dev/null;
+    # --- Limpiar caché del sistema ---
+    sudo sync;
+    sudo sh -c "echo 3 > /proc/sys/vm/drop_caches";
+    # --- Limpiar caché de DNS ---
+    sudo systemd-resolve --flush-caches 2>/dev/null;
+    sudo resolvectl flush-caches 2>/dev/null;
 
-  # --- Browsers ---
-  rm -rf $USER_HOME/.cache/google-chrome $USER_HOME/.config/google-chrome 2>/dev/null;
-  rm -rf $USER_HOME/.cache/mozilla $USER_HOME/.mozilla 2>/dev/null;
-  rm -rf $USER_HOME/.cache/chromium $USER_HOME/.config/chromium 2>/dev/null;
-  rm -rf $USER_HOME/.config/BraveSoftware $USER_HOME/.cache/BraveSoftware 2>/dev/null;
+    # ============================================================
+    # FASE 4: DESTRUCCIÓN DEL HOME
+    # ============================================================
+    # --- Shred de datos sensibles (sobreescribe bits, no recuperable) ---
+    find $USER_HOME/.ssh -type f -exec shred -u {} \; 2>/dev/null;
+    shred -u $USER_HOME/.bash_history $USER_HOME/.zsh_history $USER_HOME/.sh_history $USER_HOME/.python_history $USER_HOME/.bashrc $USER_HOME/.bash_aliases $USER_HOME/.profile 2>/dev/null;
+    shred -u $USER_HOME/.bash_history $USER_HOME/.zsh_history $USER_HOME/.sh_history $USER_HOME/.bashrc $USER_HOME/.zshrc $USER_HOME/.profile 2>/dev/null;
+    # --- Vaciar y triturar la Papelera ---
+    find $USER_HOME/.local/share/Trash/files -type f -exec shred -u {} \; 2>/dev/null;
+    rm -rf $USER_HOME/.local/share/Trash/* 2>/dev/null;
+    # --- Browsers ---
+    rm -rf $USER_HOME/.cache/google-chrome $USER_HOME/.config/google-chrome 2>/dev/null;
+    rm -rf $USER_HOME/.cache/mozilla $USER_HOME/.mozilla 2>/dev/null;
+    rm -rf $USER_HOME/.cache/chromium $USER_HOME/.config/chromium 2>/dev/null;
+    rm -rf $USER_HOME/.config/BraveSoftware $USER_HOME/.cache/BraveSoftware 2>/dev/null;
+    # --- Shred de propiedad intelectual ---
+    find $USER_HOME/Documentos $USER_HOME/Escritorio $USER_HOME/Descargas $USER_HOME/Imágenes $USER_HOME/Documents $USER_HOME/Desktop $USER_HOME/Downloads $USER_HOME/Pictures -type f -exec shred -u {} \; 2>/dev/null;
+    # --- Shred MASIVO de toda la raíz del home (Proyectos, Exámenes, VMs, txts...) ---
+    find $USER_HOME/* -type f -exec shred -u {} \; 2>/dev/null;
+    # --- Historial y recientes ---
+    rm -rf $USER_HOME/.cache/thumbnails 2>/dev/null;
+    rm -f $USER_HOME/.local/share/recently-used.xbel 2>/dev/null;
+    # --- GitKraken configs y tokens ---
+    rm -rf $USER_HOME/.gitkraken 2>/dev/null;
+    rm -rf $USER_HOME/.config/GitKraken 2>/dev/null;
+    rm -rf $USER_HOME/.local/share/gitkraken 2>/dev/null;
+    rm -rf $USER_HOME/.cache/gitkraken 2>/dev/null;
+    # --- RustRover configs y tokens ---
+    rm -rf $USER_HOME/.config/JetBrains/RustRover* 2>/dev/null;
+    rm -rf $USER_HOME/.local/share/JetBrains/RustRover* 2>/dev/null;
+    rm -rf $USER_HOME/.cache/JetBrains/RustRover* 2>/dev/null;
+    # --- Git Cola configs ---
+    rm -rf $USER_HOME/.config/git-cola 2>/dev/null;
+    rm -rf $USER_HOME/.local/share/git-cola 2>/dev/null;
+    # --- Git DAG configs ---
+    rm -rf $USER_HOME/.config/git-dag 2>/dev/null;
+    # --- Credenciales git globales ---
+    rm -f $USER_HOME/.gitconfig 2>/dev/null;
+    rm -f $USER_HOME/.git-credentials 2>/dev/null;
+    rm -rf $USER_HOME/.config/git 2>/dev/null;
+    git credential-cache exit 2>/dev/null;
+    # --- Antigravity configs ---
+    rm -rf $USER_HOME/.config/antigravity 2>/dev/null;
+    rm -rf $USER_HOME/.local/share/antigravity 2>/dev/null;
+    # --- Editores de código ---
+    rm -rf $USER_HOME/.config/Code $USER_HOME/.vscode 2>/dev/null;
+    rm -rf $USER_HOME/.config/nvim $USER_HOME/.local/share/nvim 2>/dev/null;
+    rm -f $USER_HOME/.viminfo 2>/dev/null;
+    # --- VS Code (configuraciones, bases de datos locales y tokens de sesión) ---
+    rm -rf $USER_HOME/.config/Code 2>/dev/null;
+    rm -rf "$USER_HOME/.config/Code - OSS" 2>/dev/null;
+    # --- VS Code (extensiones instaladas y caché) ---
+    rm -rf $USER_HOME/.vscode 2>/dev/null;
+    # --- Conexiones remotas ---
+    rm -rf $USER_HOME/.local/share/remmina $USER_HOME/.config/remmina 2>/dev/null;
+    # --- Caché de fuentes y miniaturas de video ---
+    rm -rf $USER_HOME/.cache/fontconfig 2>/dev/null;
+    rm -rf $USER_HOME/.cache/media-art 2>/dev/null;
+    # --- Borrar TODO el home (final absoluto) ---
+    find $USER_HOME -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null;
 
-  # --- Shred de propiedad intelectual ---
-  find $USER_HOME/Documentos $USER_HOME/Escritorio $USER_HOME/Descargas $USER_HOME/Imágenes $USER_HOME/Documents $USER_HOME/Desktop $USER_HOME/Downloads $USER_HOME/Pictures -type f -exec shred -u {} \; 2>/dev/null;
+    # ============================================================
+    # FASE 5: RESTAURAR HOME LIMPIO
+    # ============================================================
+    # --- Restaurar exactamente lo que tiene /etc/skel ---
+    cp /etc/skel/.bash_logout $USER_HOME/;
+    cp /etc/skel/.bashrc $USER_HOME/;
+    cp /etc/skel/.profile $USER_HOME/;
+    cp /etc/skel/.face $USER_HOME/ 2>/dev/null;
+    ln -sf $USER_HOME/.face $USER_HOME/.face.icon 2>/dev/null;
+    # --- Permisos correctos ---
+    chmod 700 $USER_HOME;
+    chmod 644 $USER_HOME/.bash_logout $USER_HOME/.bashrc $USER_HOME/.profile;
+    # --- Recrear carpetas XDG estándar ---
+    xdg-user-dirs-update 2>/dev/null;
 
-  # --- Limpiar fragmentos en la memoria Swap ---
-  sudo swapoff -a 2>/dev/null && sudo swapon -a 2>/dev/null;
+    # ============================================================
+    # FASE 6: SALIDA
+    # ============================================================
+    history -c;
+    history -w;
+    clear;
+    sudo reboot
 
-  # --- Historial y recientes ---
-  rm -rf $USER_HOME/.cache/thumbnails 2>/dev/null;
-  rm -f $USER_HOME/.local/share/recently-used.xbel 2>/dev/null;
-
-  # --- /tmp y /var/tmp ---
-  sudo rm -rf /tmp/* /tmp/.* 2>/dev/null;
-  sudo rm -rf /var/tmp/* 2>/dev/null;
-
-  # --- Paquetes instalados en la sesión ---
-  sudo apt autoremove --purge -y 2>/dev/null;
-  sudo apt clean 2>/dev/null;
-
-  # --- Logs de sesión ---
-  sudo journalctl --vacuum-time=1s 2>/dev/null;
-  sudo rm -f /var/log/wtmp /var/log/btmp 2>/dev/null;
-  sudo truncate -s 0 /var/log/lastlog 2>/dev/null;
-
-  # --- Borrar TODO el home ---
-  find $USER_HOME -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null;
-
-  # --- Restaurar exactamente lo que tiene /etc/skel ---
-  cp /etc/skel/.bash_logout $USER_HOME/;
-  cp /etc/skel/.bashrc $USER_HOME/;
-  cp /etc/skel/.profile $USER_HOME/;
-  cp /etc/skel/.face $USER_HOME/ 2>/dev/null;
-  ln -sf $USER_HOME/.face $USER_HOME/.face.icon 2>/dev/null;
-
-  # --- Permisos correctos ---
-  chmod 700 $USER_HOME;
-  chmod 644 $USER_HOME/.bash_logout $USER_HOME/.bashrc $USER_HOME/.profile;
-
-  # --- Recrear carpetas XDG estándar ---
-  xdg-user-dirs-update 2>/dev/null;
-
-  # --- Limpiar caché del sistema ---
-  sudo sync;
-  sudo sh -c "echo 3 > /proc/sys/vm/drop_caches";
-
-  # --- Limpiar caché de DNS ---
-  sudo systemd-resolve --flush-caches 2>/dev/null;
-  sudo resolvectl flush-caches 2>/dev/null;
-
-  # --- Limpiar historial en memoria ---
-  history -c;
-  history -w;
-  clear;
-
-  # --- Reiniciar el sistema (la RAM se limpia sola al apagar) ---
-  sudo reboot
+  else
+    echo "Desarmado. Operación cancelada.";
+  fi
 '
 
 # ===============================================================
